@@ -2,8 +2,7 @@ import json
 import os
 from datetime import datetime
 
-# O arquivo fica ao lado do script, não importa de onde o programa é executado.
-# A variável de ambiente TODO_ARQUIVO permite trocar o caminho (usado nos testes).
+# salva ao lado do script; TODO_ARQUIVO serve pra trocar o caminho nos testes
 ARQUIVO = os.environ.get(
     "TODO_ARQUIVO",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "tarefas.json"),
@@ -14,12 +13,9 @@ ICONES_PRIORIDADE = {"baixa": "🟢", "media": "🟡", "alta": "🔴"}
 FORMATO_DATA = "%d/%m/%Y %H:%M"
 
 
-# ---------------------------------------------------------------------------
-# Persistência
-# ---------------------------------------------------------------------------
 
 def _normalizar(tarefa):
-    """Completa tarefas salvas por versões antigas, que só tinham nome e concluida."""
+    # tarefas da primeira versão só tinham nome e concluida
     tarefa.setdefault("concluida", False)
     tarefa.setdefault("prioridade", "media")
     tarefa.setdefault("criada_em", None)
@@ -35,7 +31,7 @@ def carregar_tarefas(arquivo=None):
         with open(arquivo, "r", encoding="utf-8") as f:
             return [_normalizar(t) for t in json.load(f)]
     except (json.JSONDecodeError, OSError):
-        # Arquivo corrompido: guarda uma cópia para não perder os dados e começa do zero
+        # arquivo corrompido: guarda uma cópia e começa do zero
         backup = arquivo + ".corrompido"
         os.replace(arquivo, backup)
         print(f"  ⚠️  Arquivo de tarefas inválido. Uma cópia foi salva em {backup}.")
@@ -44,17 +40,13 @@ def carregar_tarefas(arquivo=None):
 
 def salvar_tarefas(tarefas, arquivo=None):
     arquivo = arquivo or ARQUIVO
-    # Escreve num arquivo temporário e depois substitui: se o programa
-    # cair no meio da escrita, o arquivo original não fica pela metade.
+    # escreve num temporário e troca, pra não deixar o arquivo pela metade se o programa cair
     temporario = arquivo + ".tmp"
     with open(temporario, "w", encoding="utf-8") as f:
         json.dump(tarefas, f, ensure_ascii=False, indent=2)
     os.replace(temporario, arquivo)
 
 
-# ---------------------------------------------------------------------------
-# Regras (sem input/print — fáceis de testar)
-# ---------------------------------------------------------------------------
 
 def _agora():
     return datetime.now().strftime(FORMATO_DATA)
@@ -133,9 +125,6 @@ def resumo(tarefas):
     return {"total": len(tarefas), "concluidas": concluidas, "pendentes": len(tarefas) - concluidas}
 
 
-# ---------------------------------------------------------------------------
-# Interface de terminal
-# ---------------------------------------------------------------------------
 
 def listar_tarefas(tarefas, somente_pendentes=False):
     visiveis = [(i, t) for i, t in enumerate(tarefas, 1)
@@ -171,7 +160,7 @@ def ler_prioridade(atual=None):
 
 
 def executar(acao, *args, **kwargs):
-    """Roda uma regra e mostra o erro de forma amigável."""
+    """Roda a função e mostra o erro sem quebrar o programa."""
     try:
         return acao(*args, **kwargs)
     except (ValueError, IndexError) as erro:
