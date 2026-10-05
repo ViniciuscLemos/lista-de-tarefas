@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+tarefas.json
+tarefas.json.*
