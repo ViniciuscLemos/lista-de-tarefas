@@ -71,6 +71,13 @@ class TestRegras(unittest.TestCase):
         self.assertEqual(todo.limpar_concluidas(self.tarefas), 2)
         self.assertEqual([t["nome"] for t in self.tarefas], ["B"])
 
+    def test_prioridade_aceita_acento_e_inicial(self):
+        self.assertEqual(todo.normalizar_prioridade("Média"), "media")
+        self.assertEqual(todo.normalizar_prioridade(" ALTA "), "alta")
+        self.assertEqual(todo.normalizar_prioridade("b"), "baixa")
+        self.assertEqual(todo.normalizar_prioridade(""), "")
+        self.assertEqual(todo.normalizar_prioridade("urgente"), "urgente")  # o criar_tarefa recusa depois
+
     def test_resumo(self):
         todo.criar_tarefa(self.tarefas, "A")
         todo.criar_tarefa(self.tarefas, "B")

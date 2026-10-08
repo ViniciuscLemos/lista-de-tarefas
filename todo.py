@@ -1,5 +1,6 @@
 import json
 import os
+import unicodedata
 from datetime import datetime
 
 # salva ao lado do script; TODO_ARQUIVO serve pra trocar o caminho nos testes
@@ -157,10 +158,17 @@ def ler_numero(mensagem):
         return -1
 
 
+def normalizar_prioridade(texto):
+    """Aceita "Média", "media" ou só a inicial (b/m/a)."""
+    sem_acento = unicodedata.normalize("NFKD", texto.strip().lower()).encode("ascii", "ignore").decode()
+    atalhos = {p[0]: p for p in PRIORIDADES}
+    return atalhos.get(sem_acento, sem_acento)
+
+
 def ler_prioridade(atual=None):
     padrao = atual or "media"
-    texto = input(f"  Prioridade (baixa/media/alta) [{padrao}]: ").strip().lower()
-    return texto or padrao
+    texto = input(f"  Prioridade (baixa/media/alta) [{padrao}]: ")
+    return normalizar_prioridade(texto) or padrao
 
 
 def executar(acao, *args, **kwargs):
