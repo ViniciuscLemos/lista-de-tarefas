@@ -108,6 +108,13 @@ class TestPersistencia(unittest.TestCase):
         self.assertEqual(todo.carregar_tarefas(self.arquivo), [])
         self.assertTrue(os.path.exists(self.arquivo + ".corrompido"))
 
+    def test_json_no_formato_errado_tambem_gera_backup(self):
+        for conteudo in ('{"nome": "não é lista"}', '["texto solto"]', '[{"sem_nome": true}]'):
+            with open(self.arquivo, "w", encoding="utf-8") as f:
+                f.write(conteudo)
+            self.assertEqual(todo.carregar_tarefas(self.arquivo), [])
+            self.assertTrue(os.path.exists(self.arquivo + ".corrompido"))
+
 
 if __name__ == "__main__":
     unittest.main()

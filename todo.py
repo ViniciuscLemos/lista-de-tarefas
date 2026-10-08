@@ -29,8 +29,12 @@ def carregar_tarefas(arquivo=None):
         return []
     try:
         with open(arquivo, "r", encoding="utf-8") as f:
-            return [_normalizar(t) for t in json.load(f)]
-    except (json.JSONDecodeError, OSError):
+            dados = json.load(f)
+        # JSON válido mas no formato errado (ex: alguém editou na mão) também conta como corrompido
+        if not isinstance(dados, list) or not all(isinstance(t, dict) and "nome" in t for t in dados):
+            raise ValueError("formato inesperado")
+        return [_normalizar(t) for t in dados]
+    except (ValueError, OSError):
         # arquivo corrompido: guarda uma cópia e começa do zero
         backup = arquivo + ".corrompido"
         os.replace(arquivo, backup)
