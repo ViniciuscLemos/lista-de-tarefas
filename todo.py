@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import unicodedata
 from datetime import datetime
 
@@ -197,61 +198,75 @@ def menu():
     return input("  Escolha uma opção: ").strip()
 
 
-def main():
-    tarefas = carregar_tarefas()
-    while True:
-        try:
-            opcao = menu()
-        except (EOFError, KeyboardInterrupt):
-            opcao = "0"
-
-        if opcao == "1":
-            listar_tarefas(tarefas)
-        elif opcao == "2":
-            listar_tarefas(tarefas, somente_pendentes=True)
-        elif opcao == "3":
-            nome = input("  Nome da tarefa: ")
-            tarefa = executar(criar_tarefa, tarefas, nome, ler_prioridade())
-            if tarefa:
-                salvar_tarefas(tarefas)
-                print(f"  ✅ Tarefa '{tarefa['nome']}' adicionada!\n")
-        elif opcao == "4":
-            listar_tarefas(tarefas, somente_pendentes=True)
-            tarefa = executar(concluir, tarefas, ler_numero("  Número da tarefa a concluir: "))
-            if tarefa:
-                salvar_tarefas(tarefas)
-                print(f"  ✅ '{tarefa['nome']}' marcada como concluída!\n")
-        elif opcao == "5":
-            listar_tarefas(tarefas)
-            tarefa = executar(reabrir, tarefas, ler_numero("  Número da tarefa a reabrir: "))
-            if tarefa:
-                salvar_tarefas(tarefas)
-                print(f"  🔄 '{tarefa['nome']}' voltou para pendente.\n")
-        elif opcao == "6":
-            listar_tarefas(tarefas)
-            numero = ler_numero("  Número da tarefa a editar: ")
-            atual = executar(obter_tarefa, tarefas, numero)
-            if atual:
-                novo_nome = input(f"  Novo nome [{atual['nome']}]: ").strip() or None
-                tarefa = executar(editar, tarefas, numero, novo_nome, ler_prioridade(atual["prioridade"]))
-                if tarefa:
-                    salvar_tarefas(tarefas)
-                    print("  ✏️  Tarefa atualizada!\n")
-        elif opcao == "7":
-            listar_tarefas(tarefas)
-            removida = executar(remover, tarefas, ler_numero("  Número da tarefa a remover: "))
-            if removida:
-                salvar_tarefas(tarefas)
-                print(f"  🗑️  '{removida['nome']}' removida!\n")
-        elif opcao == "8":
-            quantidade = limpar_concluidas(tarefas)
+def rodar_opcao(opcao, tarefas):
+    """Executa uma opção do menu. Devolve False quando é pra sair."""
+    if opcao == "1":
+        listar_tarefas(tarefas)
+    elif opcao == "2":
+        listar_tarefas(tarefas, somente_pendentes=True)
+    elif opcao == "3":
+        nome = input("  Nome da tarefa: ")
+        tarefa = executar(criar_tarefa, tarefas, nome, ler_prioridade())
+        if tarefa:
             salvar_tarefas(tarefas)
-            print(f"  🧹 {quantidade} tarefa(s) concluída(s) removida(s).\n")
-        elif opcao == "0":
-            print("\n  Até mais! 👋\n")
-            break
-        else:
-            print("  ⚠️  Opção inválida.\n")
+            print(f"  ✅ Tarefa '{tarefa['nome']}' adicionada!\n")
+    elif opcao == "4":
+        listar_tarefas(tarefas, somente_pendentes=True)
+        tarefa = executar(concluir, tarefas, ler_numero("  Número da tarefa a concluir: "))
+        if tarefa:
+            salvar_tarefas(tarefas)
+            print(f"  ✅ '{tarefa['nome']}' marcada como concluída!\n")
+    elif opcao == "5":
+        listar_tarefas(tarefas)
+        tarefa = executar(reabrir, tarefas, ler_numero("  Número da tarefa a reabrir: "))
+        if tarefa:
+            salvar_tarefas(tarefas)
+            print(f"  🔄 '{tarefa['nome']}' voltou para pendente.\n")
+    elif opcao == "6":
+        listar_tarefas(tarefas)
+        numero = ler_numero("  Número da tarefa a editar: ")
+        atual = executar(obter_tarefa, tarefas, numero)
+        if atual:
+            novo_nome = input(f"  Novo nome [{atual['nome']}]: ").strip() or None
+            tarefa = executar(editar, tarefas, numero, novo_nome, ler_prioridade(atual["prioridade"]))
+            if tarefa:
+                salvar_tarefas(tarefas)
+                print("  ✏️  Tarefa atualizada!\n")
+    elif opcao == "7":
+        listar_tarefas(tarefas)
+        removida = executar(remover, tarefas, ler_numero("  Número da tarefa a remover: "))
+        if removida:
+            salvar_tarefas(tarefas)
+            print(f"  🗑️  '{removida['nome']}' removida!\n")
+    elif opcao == "8":
+        quantidade = limpar_concluidas(tarefas)
+        salvar_tarefas(tarefas)
+        print(f"  🧹 {quantidade} tarefa(s) concluída(s) removida(s).\n")
+    elif opcao == "0":
+        print("\n  Até mais! 👋\n")
+        return False
+    else:
+        print("  ⚠️  Opção inválida.\n")
+
+    return True
+
+
+def main():
+    # No Windows, com entrada ou saída redirecionada, o Python usa cp1252:
+    # a saída quebra nos emojis e o "média" digitado chega errado
+    for fluxo in (sys.stdin, sys.stdout):
+        if hasattr(fluxo, "reconfigure"):
+            fluxo.reconfigure(encoding="utf-8")
+
+    tarefas = carregar_tarefas()
+    continuar = True
+    while continuar:
+        # Ctrl+C ou Ctrl+D em qualquer pergunta (não só no menu) sai do programa
+        # em vez de mostrar o erro do Python
+        try:
+            continuar = rodar_opcao(menu(), tarefas)
+        except (EOFError, KeyboardInterrupt):
+            continuar = rodar_opcao("0", tarefas)
 
 
 if __name__ == "__main__":
