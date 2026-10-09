@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import os
 import sys
@@ -126,6 +128,49 @@ class TestStorage(unittest.TestCase):
                 f.write(content)
             self.assertEqual(todo.load_tasks(self.path), [])
             self.assertTrue(os.path.exists(self.path + ".corrupted"))
+
+
+
+class TestCli(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.folder.name, "tasks.json")
+
+    def tearDown(self):
+        self.folder.cleanup()
+
+    def run_cli(self, *args):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            code = todo.cli(list(args), self.path)
+        return code, output.getvalue()
+
+    def test_add_done_and_list(self):
+        self.assertEqual(self.run_cli("add", "Buy", "bread", "-p", "h")[0], 0)
+        self.run_cli("add", "Study SQL")
+        self.assertEqual(self.run_cli("done", "1"), (0, "Done: Buy bread\n"))
+
+        tasks = todo.load_tasks(self.path)
+        self.assertEqual([t["priority"] for t in tasks], ["high", "medium"])
+        self.assertTrue(tasks[0]["done"])
+
+        code, text = self.run_cli("list", "--pending")
+        self.assertIn("Study SQL", text)
+        self.assertNotIn("Buy bread", text)
+
+    def test_errors_return_1_and_dont_save(self):
+        self.run_cli("add", "Only one")
+        code, text = self.run_cli("rm", "5")
+        self.assertEqual(code, 1)
+        self.assertIn("Invalid number", text)
+        self.assertEqual(len(todo.load_tasks(self.path)), 1)
+
+    def test_clear(self):
+        self.run_cli("add", "A")
+        self.run_cli("add", "B")
+        self.run_cli("done", "2")
+        self.assertEqual(self.run_cli("clear"), (0, "1 done task(s) removed.\n"))
+        self.assertEqual([t["name"] for t in todo.load_tasks(self.path)], ["A"])
 
 
 if __name__ == "__main__":

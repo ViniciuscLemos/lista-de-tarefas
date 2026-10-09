@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import sys
@@ -250,12 +251,64 @@ def run_option(option, tasks):
     return True
 
 
+def cli(argv, path=None):
+    """Direct commands, for when you don't want the menu: python todo.py add "Buy bread" -p high"""
+    parser = argparse.ArgumentParser(
+        prog="todo.py",
+        description="To-do list. Without a command it opens the menu.",
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    show = commands.add_parser("list", help="show the tasks")
+    show.add_argument("--pending", action="store_true", help="only the ones not done")
+
+    add = commands.add_parser("add", help="add a task")
+    add.add_argument("name", nargs="+", help="task name (quotes are optional)")
+    add.add_argument("-p", "--priority", default="medium", type=normalize_priority,
+                     help="low, medium or high (or l/m/h)")
+
+    for name, text in (("done", "mark as done"), ("reopen", "mark as pending again"), ("rm", "remove")):
+        command = commands.add_parser(name, help=text)
+        command.add_argument("number", type=int, help="the task number shown by list")
+
+    commands.add_parser("clear", help="remove the done tasks")
+
+    args = parser.parse_args(argv)
+    tasks = load_tasks(path)
+
+    try:
+        if args.command == "list":
+            list_tasks(tasks, pending_only=args.pending)
+            return 0
+        if args.command == "add":
+            task = create_task(tasks, " ".join(args.name), args.priority)
+            message = f"Added: {task['name']}"
+        elif args.command == "done":
+            message = f"Done: {complete(tasks, args.number)['name']}"
+        elif args.command == "reopen":
+            message = f"Pending again: {reopen(tasks, args.number)['name']}"
+        elif args.command == "rm":
+            message = f"Removed: {remove(tasks, args.number)['name']}"
+        else:
+            message = f"{clear_done(tasks)} done task(s) removed."
+    except (ValueError, IndexError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+
+    save_tasks(tasks, path)
+    print(message)
+    return 0
+
+
 def main():
     # On Windows, with input or output redirected, Python uses cp1252
     # and the output breaks on the emojis
     for stream in (sys.stdin, sys.stdout):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
+
+    if len(sys.argv) > 1:
+        sys.exit(cli(sys.argv[1:]))
 
     tasks = load_tasks()
     keep_going = True

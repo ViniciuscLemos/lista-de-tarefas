@@ -16,6 +16,19 @@ python todo.py
 
 You don't need to install anything besides Python 3.
 
+There are also direct commands, for when you don't want to open the menu:
+
+```bash
+python todo.py add Study SQL for the exam -p high
+python todo.py list --pending
+python todo.py done 1
+python todo.py rm 2
+python todo.py clear          # removes the done ones
+python todo.py --help
+```
+
+When something goes wrong (a task number that doesn't exist, for example) the command prints the error and exits with code 1, so it also works in scripts.
+
 ## What it looks like
 
 ![The task list in the terminal](docs/screenshot.png)
