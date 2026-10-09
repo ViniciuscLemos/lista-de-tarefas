@@ -1,272 +1,271 @@
 import json
 import os
 import sys
-import unicodedata
 from datetime import datetime
 
-# salva ao lado do script; TODO_ARQUIVO serve pra trocar o caminho nos testes
-ARQUIVO = os.environ.get(
-    "TODO_ARQUIVO",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "tarefas.json"),
+# saved next to the script; TODO_FILE is there to change the path in tests
+FILE = os.environ.get(
+    "TODO_FILE",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks.json"),
 )
 
-PRIORIDADES = ("baixa", "media", "alta")
-ICONES_PRIORIDADE = {"baixa": "🟢", "media": "🟡", "alta": "🔴"}
-FORMATO_DATA = "%d/%m/%Y %H:%M"
+PRIORITIES = ("low", "medium", "high")
+PRIORITY_ICONS = {"low": "🟢", "medium": "🟡", "high": "🔴"}
+DATE_FORMAT = "%Y-%m-%d %H:%M"
 
 
 
-def _normalizar(tarefa):
-    # tarefas da primeira versão só tinham nome e concluida
-    tarefa.setdefault("concluida", False)
-    tarefa.setdefault("prioridade", "media")
-    tarefa.setdefault("criada_em", None)
-    tarefa.setdefault("concluida_em", None)
-    return tarefa
+def _normalize(task):
+    # tasks from the first version only had name and done
+    task.setdefault("done", False)
+    task.setdefault("priority", "medium")
+    task.setdefault("created_at", None)
+    task.setdefault("done_at", None)
+    return task
 
 
-def carregar_tarefas(arquivo=None):
-    arquivo = arquivo or ARQUIVO
-    if not os.path.exists(arquivo):
+def load_tasks(path=None):
+    path = path or FILE
+    if not os.path.exists(path):
         return []
     try:
-        with open(arquivo, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-        # JSON válido mas no formato errado (ex: alguém editou na mão) também conta como corrompido
-        if not isinstance(dados, list) or not all(isinstance(t, dict) and "nome" in t for t in dados):
-            raise ValueError("formato inesperado")
-        return [_normalizar(t) for t in dados]
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # valid JSON in the wrong shape (someone edited it by hand, for example) also counts as corrupted
+        if not isinstance(data, list) or not all(isinstance(t, dict) and "name" in t for t in data):
+            raise ValueError("unexpected format")
+        return [_normalize(t) for t in data]
     except (ValueError, OSError):
-        # arquivo corrompido: guarda uma cópia e começa do zero
-        backup = arquivo + ".corrompido"
-        os.replace(arquivo, backup)
-        print(f"  ⚠️  Arquivo de tarefas inválido. Uma cópia foi salva em {backup}.")
+        # corrupted file: keep a copy and start from scratch
+        backup = path + ".corrupted"
+        os.replace(path, backup)
+        print(f"  ⚠️  Invalid tasks file. A copy was saved to {backup}.")
         return []
 
 
-def salvar_tarefas(tarefas, arquivo=None):
-    arquivo = arquivo or ARQUIVO
-    # escreve num temporário e troca, pra não deixar o arquivo pela metade se o programa cair
-    temporario = arquivo + ".tmp"
-    with open(temporario, "w", encoding="utf-8") as f:
-        json.dump(tarefas, f, ensure_ascii=False, indent=2)
-    os.replace(temporario, arquivo)
+def save_tasks(tasks, path=None):
+    path = path or FILE
+    # write to a temp file and swap, so the file isn't left half written if the program crashes
+    temp = path + ".tmp"
+    with open(temp, "w", encoding="utf-8") as f:
+        json.dump(tasks, f, ensure_ascii=False, indent=2)
+    os.replace(temp, path)
 
 
 
-def _agora():
-    return datetime.now().strftime(FORMATO_DATA)
+def _now():
+    return datetime.now().strftime(DATE_FORMAT)
 
 
-def criar_tarefa(tarefas, nome, prioridade="media"):
-    nome = nome.strip()
-    if not nome:
-        raise ValueError("Nome não pode ser vazio.")
-    if prioridade not in PRIORIDADES:
-        raise ValueError("Prioridade deve ser: baixa, media ou alta.")
-    tarefa = {
-        "nome": nome,
-        "concluida": False,
-        "prioridade": prioridade,
-        "criada_em": _agora(),
-        "concluida_em": None,
+def create_task(tasks, name, priority="medium"):
+    name = name.strip()
+    if not name:
+        raise ValueError("Name can't be empty.")
+    if priority not in PRIORITIES:
+        raise ValueError("Priority must be: low, medium or high.")
+    task = {
+        "name": name,
+        "done": False,
+        "priority": priority,
+        "created_at": _now(),
+        "done_at": None,
     }
-    tarefas.append(tarefa)
-    return tarefa
+    tasks.append(task)
+    return task
 
 
-def obter_tarefa(tarefas, numero):
-    """Recebe o número exibido ao usuário (começa em 1)."""
-    if not 1 <= numero <= len(tarefas):
-        raise IndexError("Número inválido.")
-    return tarefas[numero - 1]
+def get_task(tasks, number):
+    """Takes the number shown to the user (starts at 1)."""
+    if not 1 <= number <= len(tasks):
+        raise IndexError("Invalid number.")
+    return tasks[number - 1]
 
 
-def concluir(tarefas, numero):
-    tarefa = obter_tarefa(tarefas, numero)
-    if tarefa["concluida"]:
-        raise ValueError("Tarefa já está concluída.")
-    tarefa["concluida"] = True
-    tarefa["concluida_em"] = _agora()
-    return tarefa
+def complete(tasks, number):
+    task = get_task(tasks, number)
+    if task["done"]:
+        raise ValueError("Task is already done.")
+    task["done"] = True
+    task["done_at"] = _now()
+    return task
 
 
-def reabrir(tarefas, numero):
-    tarefa = obter_tarefa(tarefas, numero)
-    if not tarefa["concluida"]:
-        raise ValueError("Tarefa ainda não foi concluída.")
-    tarefa["concluida"] = False
-    tarefa["concluida_em"] = None
-    return tarefa
+def reopen(tasks, number):
+    task = get_task(tasks, number)
+    if not task["done"]:
+        raise ValueError("Task isn't done yet.")
+    task["done"] = False
+    task["done_at"] = None
+    return task
 
 
-def editar(tarefas, numero, nome=None, prioridade=None):
-    tarefa = obter_tarefa(tarefas, numero)
-    if nome is not None:
-        nome = nome.strip()
-        if not nome:
-            raise ValueError("Nome não pode ser vazio.")
-        tarefa["nome"] = nome
-    if prioridade is not None:
-        if prioridade not in PRIORIDADES:
-            raise ValueError("Prioridade deve ser: baixa, media ou alta.")
-        tarefa["prioridade"] = prioridade
-    return tarefa
+def edit(tasks, number, name=None, priority=None):
+    task = get_task(tasks, number)
+    if name is not None:
+        name = name.strip()
+        if not name:
+            raise ValueError("Name can't be empty.")
+        task["name"] = name
+    if priority is not None:
+        if priority not in PRIORITIES:
+            raise ValueError("Priority must be: low, medium or high.")
+        task["priority"] = priority
+    return task
 
 
-def remover(tarefas, numero):
-    obter_tarefa(tarefas, numero)  # valida o número
-    return tarefas.pop(numero - 1)
+def remove(tasks, number):
+    get_task(tasks, number)  # validates the number
+    return tasks.pop(number - 1)
 
 
-def limpar_concluidas(tarefas):
-    """Remove as concluídas e retorna quantas foram removidas."""
-    antes = len(tarefas)
-    tarefas[:] = [t for t in tarefas if not t["concluida"]]
-    return antes - len(tarefas)
+def clear_done(tasks):
+    """Removes the done tasks and returns how many were removed."""
+    before = len(tasks)
+    tasks[:] = [t for t in tasks if not t["done"]]
+    return before - len(tasks)
 
 
-def resumo(tarefas):
-    concluidas = sum(1 for t in tarefas if t["concluida"])
-    return {"total": len(tarefas), "concluidas": concluidas, "pendentes": len(tarefas) - concluidas}
+def summary(tasks):
+    done = sum(1 for t in tasks if t["done"])
+    return {"total": len(tasks), "done": done, "pending": len(tasks) - done}
 
 
 
-def listar_tarefas(tarefas, somente_pendentes=False):
-    visiveis = [(i, t) for i, t in enumerate(tarefas, 1)
-                if not (somente_pendentes and t["concluida"])]
-    if not visiveis:
-        print("\n  Nenhuma tarefa para mostrar.\n")
+def list_tasks(tasks, pending_only=False):
+    visible = [(i, t) for i, t in enumerate(tasks, 1)
+               if not (pending_only and t["done"])]
+    if not visible:
+        print("\n  No tasks to show.\n")
         return
-    titulo = "📋 Tarefas pendentes:" if somente_pendentes else "📋 Suas tarefas:"
-    print(f"\n  {titulo}")
+    title = "📋 Pending tasks:" if pending_only else "📋 Your tasks:"
+    print(f"\n  {title}")
     print("  " + "-" * 45)
-    for i, tarefa in visiveis:
-        status = "✅" if tarefa["concluida"] else "⬜"
-        icone = ICONES_PRIORIDADE.get(tarefa["prioridade"], "")
-        print(f"  {i}. {status} {icone} {tarefa['nome']}")
-        if tarefa["concluida_em"]:
-            print(f"        concluída em {tarefa['concluida_em']}")
-    r = resumo(tarefas)
+    for i, task in visible:
+        status = "✅" if task["done"] else "⬜"
+        icon = PRIORITY_ICONS.get(task["priority"], "")
+        print(f"  {i}. {status} {icon} {task['name']}")
+        if task["done_at"]:
+            print(f"        done on {task['done_at']}")
+    s = summary(tasks)
     print("  " + "-" * 45)
-    print(f"  {r['concluidas']}/{r['total']} concluídas · {r['pendentes']} pendente(s)\n")
+    print(f"  {s['done']}/{s['total']} done · {s['pending']} pending\n")
 
 
-def ler_numero(mensagem):
+def read_number(message):
     try:
-        return int(input(mensagem))
+        return int(input(message))
     except ValueError:
         return -1
 
 
-def normalizar_prioridade(texto):
-    """Aceita "Média", "media" ou só a inicial (b/m/a)."""
-    sem_acento = unicodedata.normalize("NFKD", texto.strip().lower()).encode("ascii", "ignore").decode()
-    atalhos = {p[0]: p for p in PRIORIDADES}
-    return atalhos.get(sem_acento, sem_acento)
+def normalize_priority(text):
+    """Accepts "Medium", "medium" or just the initial (l/m/h)."""
+    clean = text.strip().lower()
+    shortcuts = {p[0]: p for p in PRIORITIES}
+    return shortcuts.get(clean, clean)
 
 
-def ler_prioridade(atual=None):
-    padrao = atual or "media"
-    texto = input(f"  Prioridade (baixa/media/alta) [{padrao}]: ")
-    return normalizar_prioridade(texto) or padrao
+def read_priority(current=None):
+    default = current or "medium"
+    text = input(f"  Priority (low/medium/high) [{default}]: ")
+    return normalize_priority(text) or default
 
 
-def executar(acao, *args, **kwargs):
-    """Roda a função e mostra o erro sem quebrar o programa."""
+def run(action, *args, **kwargs):
+    """Runs the function and shows the error without breaking the program."""
     try:
-        return acao(*args, **kwargs)
-    except (ValueError, IndexError) as erro:
-        print(f"  ⚠️  {erro}\n")
+        return action(*args, **kwargs)
+    except (ValueError, IndexError) as error:
+        print(f"  ⚠️  {error}\n")
         return None
 
 
 def menu():
     print("\n  ================================")
-    print("        📝 Lista de Tarefas       ")
+    print("          📝 To-Do List          ")
     print("  ================================")
-    print("  1. Ver todas as tarefas")
-    print("  2. Ver tarefas pendentes")
-    print("  3. Adicionar tarefa")
-    print("  4. Concluir tarefa")
-    print("  5. Reabrir tarefa")
-    print("  6. Editar tarefa")
-    print("  7. Remover tarefa")
-    print("  8. Limpar tarefas concluídas")
-    print("  0. Sair")
+    print("  1. Show all tasks")
+    print("  2. Show pending tasks")
+    print("  3. Add task")
+    print("  4. Complete task")
+    print("  5. Reopen task")
+    print("  6. Edit task")
+    print("  7. Remove task")
+    print("  8. Clear done tasks")
+    print("  0. Quit")
     print("  ================================")
-    return input("  Escolha uma opção: ").strip()
+    return input("  Choose an option: ").strip()
 
 
-def rodar_opcao(opcao, tarefas):
-    """Executa uma opção do menu. Devolve False quando é pra sair."""
-    if opcao == "1":
-        listar_tarefas(tarefas)
-    elif opcao == "2":
-        listar_tarefas(tarefas, somente_pendentes=True)
-    elif opcao == "3":
-        nome = input("  Nome da tarefa: ")
-        tarefa = executar(criar_tarefa, tarefas, nome, ler_prioridade())
-        if tarefa:
-            salvar_tarefas(tarefas)
-            print(f"  ✅ Tarefa '{tarefa['nome']}' adicionada!\n")
-    elif opcao == "4":
-        listar_tarefas(tarefas, somente_pendentes=True)
-        tarefa = executar(concluir, tarefas, ler_numero("  Número da tarefa a concluir: "))
-        if tarefa:
-            salvar_tarefas(tarefas)
-            print(f"  ✅ '{tarefa['nome']}' marcada como concluída!\n")
-    elif opcao == "5":
-        listar_tarefas(tarefas)
-        tarefa = executar(reabrir, tarefas, ler_numero("  Número da tarefa a reabrir: "))
-        if tarefa:
-            salvar_tarefas(tarefas)
-            print(f"  🔄 '{tarefa['nome']}' voltou para pendente.\n")
-    elif opcao == "6":
-        listar_tarefas(tarefas)
-        numero = ler_numero("  Número da tarefa a editar: ")
-        atual = executar(obter_tarefa, tarefas, numero)
-        if atual:
-            novo_nome = input(f"  Novo nome [{atual['nome']}]: ").strip() or None
-            tarefa = executar(editar, tarefas, numero, novo_nome, ler_prioridade(atual["prioridade"]))
-            if tarefa:
-                salvar_tarefas(tarefas)
-                print("  ✏️  Tarefa atualizada!\n")
-    elif opcao == "7":
-        listar_tarefas(tarefas)
-        removida = executar(remover, tarefas, ler_numero("  Número da tarefa a remover: "))
-        if removida:
-            salvar_tarefas(tarefas)
-            print(f"  🗑️  '{removida['nome']}' removida!\n")
-    elif opcao == "8":
-        quantidade = limpar_concluidas(tarefas)
-        salvar_tarefas(tarefas)
-        print(f"  🧹 {quantidade} tarefa(s) concluída(s) removida(s).\n")
-    elif opcao == "0":
-        print("\n  Até mais! 👋\n")
+def run_option(option, tasks):
+    """Runs a menu option. Returns False when it's time to quit."""
+    if option == "1":
+        list_tasks(tasks)
+    elif option == "2":
+        list_tasks(tasks, pending_only=True)
+    elif option == "3":
+        name = input("  Task name: ")
+        task = run(create_task, tasks, name, read_priority())
+        if task:
+            save_tasks(tasks)
+            print(f"  ✅ Task '{task['name']}' added!\n")
+    elif option == "4":
+        list_tasks(tasks, pending_only=True)
+        task = run(complete, tasks, read_number("  Number of the task to complete: "))
+        if task:
+            save_tasks(tasks)
+            print(f"  ✅ '{task['name']}' marked as done!\n")
+    elif option == "5":
+        list_tasks(tasks)
+        task = run(reopen, tasks, read_number("  Number of the task to reopen: "))
+        if task:
+            save_tasks(tasks)
+            print(f"  🔄 '{task['name']}' is pending again.\n")
+    elif option == "6":
+        list_tasks(tasks)
+        number = read_number("  Number of the task to edit: ")
+        current = run(get_task, tasks, number)
+        if current:
+            new_name = input(f"  New name [{current['name']}]: ").strip() or None
+            task = run(edit, tasks, number, new_name, read_priority(current["priority"]))
+            if task:
+                save_tasks(tasks)
+                print("  ✏️  Task updated!\n")
+    elif option == "7":
+        list_tasks(tasks)
+        removed = run(remove, tasks, read_number("  Number of the task to remove: "))
+        if removed:
+            save_tasks(tasks)
+            print(f"  🗑️  '{removed['name']}' removed!\n")
+    elif option == "8":
+        count = clear_done(tasks)
+        save_tasks(tasks)
+        print(f"  🧹 {count} done task(s) removed.\n")
+    elif option == "0":
+        print("\n  See you! 👋\n")
         return False
     else:
-        print("  ⚠️  Opção inválida.\n")
+        print("  ⚠️  Invalid option.\n")
 
     return True
 
 
 def main():
-    # No Windows, com entrada ou saída redirecionada, o Python usa cp1252:
-    # a saída quebra nos emojis e o "média" digitado chega errado
-    for fluxo in (sys.stdin, sys.stdout):
-        if hasattr(fluxo, "reconfigure"):
-            fluxo.reconfigure(encoding="utf-8")
+    # On Windows, with input or output redirected, Python uses cp1252
+    # and the output breaks on the emojis
+    for stream in (sys.stdin, sys.stdout):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
-    tarefas = carregar_tarefas()
-    continuar = True
-    while continuar:
-        # Ctrl+C ou Ctrl+D em qualquer pergunta (não só no menu) sai do programa
-        # em vez de mostrar o erro do Python
+    tasks = load_tasks()
+    keep_going = True
+    while keep_going:
+        # Ctrl+C or Ctrl+D on any prompt (not just the menu) quits the program
+        # instead of showing the Python error
         try:
-            continuar = rodar_opcao(menu(), tarefas)
+            keep_going = run_option(menu(), tasks)
         except (EOFError, KeyboardInterrupt):
-            continuar = rodar_opcao("0", tarefas)
+            keep_going = run_option("0", tasks)
 
 
 if __name__ == "__main__":

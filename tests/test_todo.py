@@ -9,118 +9,118 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import todo  # noqa: E402
 
 
-class TestRegras(unittest.TestCase):
+class TestRules(unittest.TestCase):
     def setUp(self):
-        self.tarefas = []
+        self.tasks = []
 
-    def test_criar_tarefa_preenche_campos(self):
-        tarefa = todo.criar_tarefa(self.tarefas, "  Estudar  ", "alta")
-        self.assertEqual(tarefa["nome"], "Estudar")
-        self.assertEqual(tarefa["prioridade"], "alta")
-        self.assertFalse(tarefa["concluida"])
-        self.assertIsNotNone(tarefa["criada_em"])
-        self.assertEqual(len(self.tarefas), 1)
+    def test_create_task_fills_fields(self):
+        task = todo.create_task(self.tasks, "  Study  ", "high")
+        self.assertEqual(task["name"], "Study")
+        self.assertEqual(task["priority"], "high")
+        self.assertFalse(task["done"])
+        self.assertIsNotNone(task["created_at"])
+        self.assertEqual(len(self.tasks), 1)
 
-    def test_criar_tarefa_rejeita_nome_vazio(self):
+    def test_create_task_rejects_empty_name(self):
         with self.assertRaises(ValueError):
-            todo.criar_tarefa(self.tarefas, "   ")
+            todo.create_task(self.tasks, "   ")
 
-    def test_criar_tarefa_rejeita_prioridade_invalida(self):
+    def test_create_task_rejects_invalid_priority(self):
         with self.assertRaises(ValueError):
-            todo.criar_tarefa(self.tarefas, "x", "urgente")
+            todo.create_task(self.tasks, "x", "urgent")
 
-    def test_concluir_e_reabrir(self):
-        todo.criar_tarefa(self.tarefas, "A")
-        todo.concluir(self.tarefas, 1)
-        self.assertTrue(self.tarefas[0]["concluida"])
-        self.assertIsNotNone(self.tarefas[0]["concluida_em"])
+    def test_complete_and_reopen(self):
+        todo.create_task(self.tasks, "A")
+        todo.complete(self.tasks, 1)
+        self.assertTrue(self.tasks[0]["done"])
+        self.assertIsNotNone(self.tasks[0]["done_at"])
         with self.assertRaises(ValueError):
-            todo.concluir(self.tarefas, 1)
+            todo.complete(self.tasks, 1)
 
-        todo.reabrir(self.tarefas, 1)
-        self.assertFalse(self.tarefas[0]["concluida"])
-        self.assertIsNone(self.tarefas[0]["concluida_em"])
+        todo.reopen(self.tasks, 1)
+        self.assertFalse(self.tasks[0]["done"])
+        self.assertIsNone(self.tasks[0]["done_at"])
 
-    def test_numero_invalido(self):
-        todo.criar_tarefa(self.tarefas, "A")
-        for numero in (0, 2, -1):
+    def test_invalid_number(self):
+        todo.create_task(self.tasks, "A")
+        for number in (0, 2, -1):
             with self.assertRaises(IndexError):
-                todo.concluir(self.tarefas, numero)
+                todo.complete(self.tasks, number)
 
-    def test_editar(self):
-        todo.criar_tarefa(self.tarefas, "A")
-        todo.editar(self.tarefas, 1, nome="B", prioridade="baixa")
-        self.assertEqual(self.tarefas[0]["nome"], "B")
-        self.assertEqual(self.tarefas[0]["prioridade"], "baixa")
-        # None mantém o valor atual
-        todo.editar(self.tarefas, 1)
-        self.assertEqual(self.tarefas[0]["nome"], "B")
+    def test_edit(self):
+        todo.create_task(self.tasks, "A")
+        todo.edit(self.tasks, 1, name="B", priority="low")
+        self.assertEqual(self.tasks[0]["name"], "B")
+        self.assertEqual(self.tasks[0]["priority"], "low")
+        # None keeps the current value
+        todo.edit(self.tasks, 1)
+        self.assertEqual(self.tasks[0]["name"], "B")
 
-    def test_remover(self):
-        todo.criar_tarefa(self.tarefas, "A")
-        todo.criar_tarefa(self.tarefas, "B")
-        removida = todo.remover(self.tarefas, 1)
-        self.assertEqual(removida["nome"], "A")
-        self.assertEqual([t["nome"] for t in self.tarefas], ["B"])
+    def test_remove(self):
+        todo.create_task(self.tasks, "A")
+        todo.create_task(self.tasks, "B")
+        removed = todo.remove(self.tasks, 1)
+        self.assertEqual(removed["name"], "A")
+        self.assertEqual([t["name"] for t in self.tasks], ["B"])
 
-    def test_limpar_concluidas(self):
-        for nome in "ABC":
-            todo.criar_tarefa(self.tarefas, nome)
-        todo.concluir(self.tarefas, 1)
-        todo.concluir(self.tarefas, 3)
-        self.assertEqual(todo.limpar_concluidas(self.tarefas), 2)
-        self.assertEqual([t["nome"] for t in self.tarefas], ["B"])
+    def test_clear_done(self):
+        for name in "ABC":
+            todo.create_task(self.tasks, name)
+        todo.complete(self.tasks, 1)
+        todo.complete(self.tasks, 3)
+        self.assertEqual(todo.clear_done(self.tasks), 2)
+        self.assertEqual([t["name"] for t in self.tasks], ["B"])
 
-    def test_prioridade_aceita_acento_e_inicial(self):
-        self.assertEqual(todo.normalizar_prioridade("Média"), "media")
-        self.assertEqual(todo.normalizar_prioridade(" ALTA "), "alta")
-        self.assertEqual(todo.normalizar_prioridade("b"), "baixa")
-        self.assertEqual(todo.normalizar_prioridade(""), "")
-        self.assertEqual(todo.normalizar_prioridade("urgente"), "urgente")  # o criar_tarefa recusa depois
+    def test_priority_accepts_any_case_and_initial(self):
+        self.assertEqual(todo.normalize_priority("Medium"), "medium")
+        self.assertEqual(todo.normalize_priority(" HIGH "), "high")
+        self.assertEqual(todo.normalize_priority("l"), "low")
+        self.assertEqual(todo.normalize_priority(""), "")
+        self.assertEqual(todo.normalize_priority("urgent"), "urgent")  # create_task rejects it later
 
-    def test_resumo(self):
-        todo.criar_tarefa(self.tarefas, "A")
-        todo.criar_tarefa(self.tarefas, "B")
-        todo.concluir(self.tarefas, 2)
-        self.assertEqual(todo.resumo(self.tarefas), {"total": 2, "concluidas": 1, "pendentes": 1})
+    def test_summary(self):
+        todo.create_task(self.tasks, "A")
+        todo.create_task(self.tasks, "B")
+        todo.complete(self.tasks, 2)
+        self.assertEqual(todo.summary(self.tasks), {"total": 2, "done": 1, "pending": 1})
 
 
-class TestPersistencia(unittest.TestCase):
+class TestStorage(unittest.TestCase):
     def setUp(self):
-        self.pasta = tempfile.TemporaryDirectory()
-        self.arquivo = os.path.join(self.pasta.name, "tarefas.json")
+        self.folder = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.folder.name, "tasks.json")
 
     def tearDown(self):
-        self.pasta.cleanup()
+        self.folder.cleanup()
 
-    def test_salvar_e_carregar(self):
-        tarefas = []
-        todo.criar_tarefa(tarefas, "Ler", "alta")
-        todo.salvar_tarefas(tarefas, self.arquivo)
-        self.assertEqual(todo.carregar_tarefas(self.arquivo), tarefas)
+    def test_save_and_load(self):
+        tasks = []
+        todo.create_task(tasks, "Read", "high")
+        todo.save_tasks(tasks, self.path)
+        self.assertEqual(todo.load_tasks(self.path), tasks)
 
-    def test_arquivo_inexistente_retorna_lista_vazia(self):
-        self.assertEqual(todo.carregar_tarefas(self.arquivo), [])
+    def test_missing_file_returns_empty_list(self):
+        self.assertEqual(todo.load_tasks(self.path), [])
 
-    def test_formato_antigo_e_completado(self):
-        with open(self.arquivo, "w", encoding="utf-8") as f:
-            json.dump([{"nome": "Antiga", "concluida": True}], f)
-        tarefa = todo.carregar_tarefas(self.arquivo)[0]
-        self.assertEqual(tarefa["prioridade"], "media")
-        self.assertIn("criada_em", tarefa)
+    def test_old_format_gets_filled_in(self):
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump([{"name": "Old one", "done": True}], f)
+        task = todo.load_tasks(self.path)[0]
+        self.assertEqual(task["priority"], "medium")
+        self.assertIn("created_at", task)
 
-    def test_arquivo_corrompido_gera_backup(self):
-        with open(self.arquivo, "w", encoding="utf-8") as f:
-            f.write("{isso não é json")
-        self.assertEqual(todo.carregar_tarefas(self.arquivo), [])
-        self.assertTrue(os.path.exists(self.arquivo + ".corrompido"))
+    def test_corrupted_file_makes_backup(self):
+        with open(self.path, "w", encoding="utf-8") as f:
+            f.write("{this is not json")
+        self.assertEqual(todo.load_tasks(self.path), [])
+        self.assertTrue(os.path.exists(self.path + ".corrupted"))
 
-    def test_json_no_formato_errado_tambem_gera_backup(self):
-        for conteudo in ('{"nome": "não é lista"}', '["texto solto"]', '[{"sem_nome": true}]'):
-            with open(self.arquivo, "w", encoding="utf-8") as f:
-                f.write(conteudo)
-            self.assertEqual(todo.carregar_tarefas(self.arquivo), [])
-            self.assertTrue(os.path.exists(self.arquivo + ".corrompido"))
+    def test_json_in_wrong_shape_also_makes_backup(self):
+        for content in ('{"name": "not a list"}', '["loose text"]', '[{"no_name": true}]'):
+            with open(self.path, "w", encoding="utf-8") as f:
+                f.write(content)
+            self.assertEqual(todo.load_tasks(self.path), [])
+            self.assertTrue(os.path.exists(self.path + ".corrupted"))
 
 
 if __name__ == "__main__":

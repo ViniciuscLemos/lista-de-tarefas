@@ -1,37 +1,37 @@
-# Lista de Tarefas
+# To-Do List
 
-Lista de tarefas pra usar no terminal, feita em Python. Foi um dos meus primeiros projetos.
+A to-do list for the terminal, written in Python. It was one of my first projects.
 
-Dá pra adicionar tarefas com prioridade (baixa, média ou alta), marcar como concluída, reabrir, editar, remover e limpar as que já foram concluídas. Tudo fica salvo num `tarefas.json` na mesma pasta do script.
+You can add tasks with a priority (low, medium or high), mark them as done, reopen, edit, remove and clear the ones that are already done. Everything is saved to a `tasks.json` in the same folder as the script.
 
-## Como usar
+## How to use
 
 ```bash
-git clone https://github.com/ViniciuscLemos/lista-de-tarefas
-cd lista-de-tarefas
+git clone https://github.com/ViniciuscLemos/todo-list
+cd todo-list
 python todo.py
 ```
 
-Não precisa instalar nada além do Python 3.
+You don't need to install anything besides Python 3.
 
-## Como fica
+## What it looks like
 
 ```
-  📋 Suas tarefas:
+  📋 Your tasks:
   ---------------------------------------------
-  1. ⬜ 🔴 Estudar SQL pra prova
-  2. ✅ 🟢 Comprar pão
-        concluída em 08/10/2026 10:02
-  3. ⬜ 🟡 Revisar o trabalho de POO
+  1. ⬜ 🔴 Study SQL for the exam
+  2. ✅ 🟢 Buy bread
+        done on 2026-10-08 10:02
+  3. ⬜ 🟡 Review the OOP assignment
   ---------------------------------------------
-  1/3 concluídas · 2 pendente(s)
+  1/3 done · 2 pending
 ```
 
-A bolinha é a prioridade (vermelha alta, amarela média, verde baixa). Na hora de escolher a prioridade dá pra digitar `média`, `media` ou só a inicial (`a`, `m`, `b`).
+The dot is the priority (red is high, yellow medium, green low). When picking the priority you can type `medium`, `Medium` or just the initial (`h`, `m`, `l`).
 
-Se o `tarefas.json` estiver corrompido ou num formato estranho, o programa guarda uma cópia dele como `tarefas.json.corrompido` e começa uma lista nova, em vez de travar. E ele salva num arquivo temporário antes de trocar pelo de verdade, então se o computador desligar no meio, a lista antiga continua inteira.
+If `tasks.json` is corrupted or in a weird format, the program keeps a copy of it as `tasks.json.corrupted` and starts a new list instead of crashing. It also writes to a temp file before swapping it with the real one, so if the computer shuts down halfway through, the old list is still intact.
 
-## Testes
+## Tests
 
 ```bash
 python -m unittest discover -s tests
