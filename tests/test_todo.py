@@ -8,6 +8,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import todo  # noqa: E402
 
+# the program does this in main(); the tests call the functions directly, and on a
+# Windows console the warning with an emoji would break with cp1252
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 
 class TestRules(unittest.TestCase):
     def setUp(self):
